@@ -1,0 +1,25 @@
+--- ADD PRIMARY KEY 
+  Alter Table data.membership
+  add constraint PK_MemID
+  Primary key ([MemberID])
+
+  -- ADD FOREIGN KEY
+
+    Alter Table data.PAYMENTHISTORY ---WITH NOCHECK --(IF THERE IS A CONFLICT)
+  add constraint FK_MembershipID
+  Foreign key ([MemberID])  --the key/column to be referenced
+  references data.membership ([MemberID])  ---reference to a table with table column name
+
+-- DROP CONSTRAINT
+Alter Table Datamembership   
+Drop Constraint PK__Membersh__0CF04B38D8BAD702
+
+Alter Table Data.PaymentHistory   
+Drop Constraint FK_MembershipID
+
+-- IF YOU DON'T KNOW THE CONSTRAINT'S NAME
+SELECT CONSTRAINT_NAME
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+WHERE TABLE_NAME = 'PAYMENTHISTORY' -- Table Name
+AND TABLE_SCHEMA = 'data' -- change it if table is in some other schema
+AND CONSTRAINT_TYPE = 'FOREIGN KEY'
