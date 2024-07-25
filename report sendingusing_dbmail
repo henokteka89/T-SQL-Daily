@@ -1,0 +1,79 @@
+-- create stored proc
+ USE  [StackOverflow2010];
+GO
+
+CREATE PROCEDURE SendReportResults
+AS
+BEGIN
+    DECLARE @query NVARCHAR(MAX);
+    DECLARE @subject NVARCHAR(100);
+    DECLARE @recipients NVARCHAR(MAX);
+    DECLARE @body NVARCHAR(MAX);
+    DECLARE @result NVARCHAR(MAX);
+
+    SET @query = '
+        SELECT top 100 Id, DisplayName, Location, Reputation 
+                FROM Users
+    ';
+
+    SET @subject = 'Daily Report';
+    SET @recipients = 'recipient1@example.com;recipient2@example.com';
+    SET @body = 'Please find the daily report attached.';
+
+    -- Use FOR XML PATH to format the query result as HTML
+    SET @result = (
+        SELECT top 100 Id, DisplayName, Location, Reputation 
+                FROM Users
+        FOR XML PATH('tr'), TYPE
+    ).value('.', 'NVARCHAR(MAX)');
+
+    -- Add HTML table structure
+    SET @result = '<table border="1"><tr><th>Column1</th><th>Column2</th><th>Column3</th></tr>' + @result + '</table>';
+
+    -- Ensure the total body length does not exceed NVARCHAR(MAX)
+    IF LEN(@body + @result) <= 4000
+    BEGIN
+        SET @body = @body + @result;
+    END
+    ELSE
+    BEGIN
+        SET @body = @body + LEFT(@result, 4000 - LEN(@body));
+    END
+
+    -- Send email with the query results as HTML
+    EXEC msdb.dbo.sp_send_dbmail
+        @profile_name = 'DBMail',
+        @recipients = @recipients,
+        @subject = @subject,
+        @body = @body,
+        @body_format = 'HTML';
+END;
+GO
+
+
+USE msdb;
+GO
+ 
+EXEC sp_add_job
+    @job_name = N'Send Daily Report';
+
+EXEC sp_add_jobstep
+    @job_name = N'Send Daily Report',
+    @step_name = N'Execute Stored Procedure',
+    @subsystem = N'TSQL',
+    @command = N'EXEC StackOverflow2010.dbo.SendReportResults;',
+    @database_name = N'StackOverflow2010';
+
+EXEC sp_add_schedule
+    @schedule_name = N'Daily at 8 AM',
+    @freq_type = 4,
+    @freq_interval = 1,
+    @active_start_time = 080000;
+
+EXEC sp_attach_schedule
+    @job_name = N'Send Daily Report',
+    @schedule_name = N'Daily at 8 AM';
+
+EXEC sp_add_jobserver
+    @job_name = N'Send Daily Report',
+    @server_name = N'Desktop123';
