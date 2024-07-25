@@ -1,0 +1,2 @@
+--- Objects referenced in stored procedure or other objects
+EXEC sp_depends '<TableName>'
